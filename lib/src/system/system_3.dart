@@ -3,14 +3,33 @@ part of system;
 typedef void System3Operation<C0, C1, C2>(C0 c0, C1 c1, C2 c2, num deltaTime);
 
 class System3<C0, C1, C2> {
-  final World world;
+  final TypeStoreRegistry typeStoreRegistry;
 
   final System3Operation operation;
 
   Observe3Nodes<C0, C1, C2> _nodes;
 
-  System3(this.world, this.operation) {
-    _nodes = new Observe3Nodes<C0, C1, C2>(world);
+  System3(this.typeStoreRegistry, this.operation) {
+    if (C0 == dynamic) {
+      throw new ArgumentError('The first type parameter must be specified and '
+          'must not be `dynamic`.');
+    }
+
+    if (C1 == dynamic) {
+      throw new ArgumentError('The second type parameter must be specified and '
+          'must not be `dynamic`.');
+    }
+
+    if (C2 == dynamic) {
+      throw new ArgumentError('The third type parameter must be specified and '
+          'must not be `dynamic`.');
+    }
+
+    final store0 = typeStoreRegistry.get<C0>(C0);
+    final store1 = typeStoreRegistry.get<C1>(C1);
+    final store2 = typeStoreRegistry.get<C2>(C2);
+
+    _nodes = new Observe3Nodes<C0, C1, C2>(store0, store1, store2);
   }
 
   void run(num deltaTime) {

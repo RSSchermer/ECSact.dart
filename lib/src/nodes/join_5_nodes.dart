@@ -1,17 +1,27 @@
 part of nodes;
 
+/// Iterates over 5 [ComponentTypeStore]s simultaneously and joins the component
+/// values into [Node5] instances based on the entity IDs to which they are
+/// associated.
 class Join5Nodes<C0, C1, C2, C3, C4>
     extends IterableBase<Node5<C0, C1, C2, C3, C4>> {
-  final ComponentStore<C0> store0;
+  /// The first [ComponentTypeStore].
+  final ComponentTypeStore<C0> store0;
 
-  final ComponentStore<C1> store1;
+  /// The second [ComponentTypeStore].
+  final ComponentTypeStore<C1> store1;
 
-  final ComponentStore<C2> store2;
+  /// The third [ComponentTypeStore].
+  final ComponentTypeStore<C2> store2;
 
-  final ComponentStore<C3> store3;
+  /// The fourth [ComponentTypeStore].
+  final ComponentTypeStore<C3> store3;
 
-  final ComponentStore<C4> store4;
+  /// The fifth [ComponentTypeStore].
+  final ComponentTypeStore<C4> store4;
 
+  /// Creates a new [Join5Nodes] instance that joins [store0], [store1],
+  /// [store2], [store3] and [store4].
   Join5Nodes(this.store0, this.store1, this.store2, this.store3, this.store4);
 
   Iterator<Node5<C0, C1, C2, C3, C4>> get iterator =>
@@ -20,15 +30,15 @@ class Join5Nodes<C0, C1, C2, C3, C4>
 
 class _Join5NodesIterator<C0, C1, C2, C3, C4>
     implements Iterator<Node5<C0, C1, C2, C3, C4>> {
-  final ComponentStore<C0> store0;
+  final ComponentTypeStore<C0> store0;
 
-  final ComponentStore<C1> store1;
+  final ComponentTypeStore<C1> store1;
 
-  final ComponentStore<C2> store2;
+  final ComponentTypeStore<C2> store2;
 
-  final ComponentStore<C3> store3;
+  final ComponentTypeStore<C3> store3;
 
-  final ComponentStore<C4> store4;
+  final ComponentTypeStore<C4> store4;
 
   ComponentStoreIterator<C0> _store0Iterator;
 

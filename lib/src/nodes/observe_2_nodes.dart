@@ -1,11 +1,18 @@
 part of nodes;
 
+/// Maintains a sequence of [Node2] instances by joining the component values in
+/// 2 [ComponentTypeStore]s based on the entity IDs to which they are associated
+/// and then observing them for subsequent changes.
+///
+/// Similar to [Join2Nodes], but rather than reconstruct the sequence of [Node2]
+/// instances on every iteration, it maintains a sequence of [Node2] instances
+/// by observing the [ComponentTypeStore]s.
 class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
-  final World world;
+  /// The first [ComponentTypeStore].
+  final ComponentTypeStore<C0> store0;
 
-  ComponentStore<C0> _store0;
-
-  ComponentStore<C1> _store1;
+  /// The second [ComponentTypeStore].
+  final ComponentTypeStore<C1> store1;
 
   final Map<int, Node2<C0, C1>> _entityIdsNodes = {};
 
@@ -13,36 +20,13 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
 
   final Set<int> _potentialRemoves = new Set();
 
-  Observe2Nodes(this.world) {
-    if (C0 == dynamic || C0 == Object) {
-      throw new ArgumentError('The first type parameter must be specified and '
-          'must not be `dynamic` or `Object`.');
-    }
-
-    if (C1 == dynamic || C1 == Object) {
-      throw new ArgumentError('The second type parameter must be specified and '
-          'must not be `dynamic` or `Object`.');
-    }
-
-    _store0 = world.componentDatabase[C0] as ComponentStore<C0>;
-
-    if (_store0 == null) {
-      throw new StateError('Could not find a store on the given world for '
-          'component type `$C0`.');
-    }
-
-    _store1 = world.componentDatabase[C1] as ComponentStore<C1>;
-
-    if (_store1 == null) {
-      throw new StateError('Could not find a store on the given world for '
-          'component type `$C1`.');
-    }
-
-    for (final node in new Join2Nodes(_store0, _store1)) {
+  /// Creates a new [Observe2Nodes] instance that joins [store0] and [store1].
+  Observe2Nodes(this.store0, this.store1) {
+    for (final node in new Join2Nodes(store0, store1)) {
       _entityIdsNodes[node.entityId] = node;
     }
 
-    _store0.changes.listen((changeRecords) {
+    store0.changes.listen((changeRecords) {
       for (final changeRecord in changeRecords) {
         final id = changeRecord.entityId;
 
@@ -60,7 +44,7 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
       }
     });
 
-    _store1.changes.listen((changeRecords) {
+    store1.changes.listen((changeRecords) {
       for (final changeRecord in changeRecords) {
         final id = changeRecord.entityId;
 
@@ -81,8 +65,8 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
 
   Iterator<Node2<C0, C1>> get iterator {
     for (final id in _potentialInserts) {
-      final c0 = _store0[id];
-      final c1 = _store1[id];
+      final c0 = store0[id];
+      final c1 = store1[id];
 
       if (c0 != null && c1 != null) {
         _entityIdsNodes[id] = new Node2(id, c0, c1);
@@ -90,8 +74,8 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
     }
 
     for (final id in _potentialRemoves) {
-      if (!_store0.containsComponentFor(id) ||
-          !_store1.containsComponentFor(id)) {
+      if (!store0.containsComponentFor(id) ||
+          !store1.containsComponentFor(id)) {
         _entityIdsNodes.remove(id);
       }
     }

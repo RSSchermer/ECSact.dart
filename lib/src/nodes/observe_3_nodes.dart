@@ -1,13 +1,21 @@
 part of nodes;
 
+/// Maintains a sequence of [Node3] instances by joining the component values in
+/// 3 [ComponentTypeStore]s based on the entity IDs to which they are associated
+/// and then observing them for subsequent changes.
+///
+/// Similar to [Join3Nodes], but rather than reconstruct the sequence of [Node3]
+/// instances on every iteration, it maintains a sequence of [Node3] instances
+/// by observing the [ComponentTypeStore]s.
 class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
-  final World world;
+  /// The first [ComponentTypeStore].
+  final ComponentTypeStore<C0> store0;
 
-  ComponentStore<C0> _store0;
+  /// The second [ComponentTypeStore].
+  final ComponentTypeStore<C1> store1;
 
-  ComponentStore<C1> _store1;
-
-  ComponentStore<C2> _store2;
+  /// The third [ComponentTypeStore].
+  final ComponentTypeStore<C2> store2;
 
   final Map<int, Node3<C0, C1, C2>> _entityIdsNodes = {};
 
@@ -15,48 +23,14 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
 
   final Set<int> _potentialRemoves = new Set();
 
-  Observe3Nodes(this.world) {
-    if (C0 == dynamic || C0 == Object) {
-      throw new ArgumentError('The first type parameter must be specified and '
-          'must not be `dynamic` or `Object`.');
-    }
-
-    if (C1 == dynamic || C1 == Object) {
-      throw new ArgumentError('The second type parameter must be specified and '
-          'must not be `dynamic` or `Object`.');
-    }
-
-    if (C2 == dynamic || C2 == Object) {
-      throw new ArgumentError('The third type parameter must be specified and '
-          'must not be `dynamic` or `Object`.');
-    }
-
-    _store0 = world.componentDatabase[C0] as ComponentStore<C0>;
-
-    if (_store0 == null) {
-      throw new StateError('Could not find a store on the given world for '
-          'component type `$C0`.');
-    }
-
-    _store1 = world.componentDatabase[C1] as ComponentStore<C1>;
-
-    if (_store1 == null) {
-      throw new StateError('Could not find a store on the given world for '
-          'component type `$C1`.');
-    }
-
-    _store2 = world.componentDatabase[C2] as ComponentStore<C2>;
-
-    if (_store2 == null) {
-      throw new StateError('Could not find a store on the given world for '
-          'component type `$C2`.');
-    }
-
-    for (final node in new Join3Nodes(_store0, _store1, _store2)) {
+  /// Creates a new [Observe3Nodes] instance that joins [store0], [store1] and
+  /// [store2].
+  Observe3Nodes(this.store0, this.store1, this.store2) {
+    for (final node in new Join3Nodes(store0, store1, store2)) {
       _entityIdsNodes[node.entityId] = node;
     }
 
-    _store0.changes.listen((changeRecords) {
+    store0.changes.listen((changeRecords) {
       for (final changeRecord in changeRecords) {
         final id = changeRecord.entityId;
 
@@ -75,7 +49,7 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
       }
     });
 
-    _store1.changes.listen((changeRecords) {
+    store1.changes.listen((changeRecords) {
       for (final changeRecord in changeRecords) {
         final id = changeRecord.entityId;
 
@@ -94,7 +68,7 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
       }
     });
 
-    _store2.changes.listen((changeRecords) {
+    store2.changes.listen((changeRecords) {
       for (final changeRecord in changeRecords) {
         final id = changeRecord.entityId;
 
@@ -116,9 +90,9 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
 
   Iterator<Node3<C0, C1, C2>> get iterator {
     for (final id in _potentialInserts) {
-      final c0 = _store0[id];
-      final c1 = _store1[id];
-      final c2 = _store2[id];
+      final c0 = store0[id];
+      final c1 = store1[id];
+      final c2 = store2[id];
 
       if (c0 != null && c1 != null && c2 != null) {
         _entityIdsNodes[id] = new Node3(id, c0, c1, c2);
@@ -126,9 +100,9 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
     }
 
     for (final id in _potentialRemoves) {
-      if (!_store0.containsComponentFor(id) ||
-          !_store1.containsComponentFor(id) ||
-          !_store2.containsComponentFor(id)) {
+      if (!store0.containsComponentFor(id) ||
+          !store1.containsComponentFor(id) ||
+          !store2.containsComponentFor(id)) {
         _entityIdsNodes.remove(id);
       }
     }

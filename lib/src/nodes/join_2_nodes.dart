@@ -1,10 +1,16 @@
 part of nodes;
 
+/// Iterates over 2 [ComponentTypeStore]s simultaneously and joins the component
+/// values into [Node2] instances based on the entity IDs to which they are
+/// associated.
 class Join2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
-  final ComponentStore<C0> store0;
+  /// The first [ComponentTypeStore].
+  final ComponentTypeStore<C0> store0;
 
-  final ComponentStore<C1> store1;
+  /// The second [ComponentTypeStore].
+  final ComponentTypeStore<C1> store1;
 
+  /// Creates a new [Join2Nodes] instance that joins [store0] and [store1].
   Join2Nodes(this.store0, this.store1);
 
   Iterator<Node2<C0, C1>> get iterator =>
@@ -12,9 +18,9 @@ class Join2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
 }
 
 class _Join2NodesIterator<C0, C1> implements Iterator<Node2<C0, C1>> {
-  final ComponentStore<C0> store0;
+  final ComponentTypeStore<C0> store0;
 
-  final ComponentStore<C1> store1;
+  final ComponentTypeStore<C1> store1;
 
   ComponentStoreIterator<C0> _store0Iterator;
 

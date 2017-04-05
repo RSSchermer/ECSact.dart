@@ -1,3 +1,4 @@
+/// Provides data structures for an entity-oriented view on component data.
 library world;
 
 import 'dart:async';
@@ -6,42 +7,194 @@ import 'dart:collection';
 import 'package:observable/observable.dart';
 import 'package:quiver/core.dart';
 
-import 'component_store.dart';
+import 'component_data.dart';
 import 'entity.dart';
 
+/// A view on a [TypeStoreRegistry] as a collection of [Entity] instances.
+///
+/// Entities can be created by calling the [createEntity()] method on a [World].
+/// Components can then be added to these entities via the `[]` operator:
+///
+///     final myEntity = world.createEntity()
+///         ..add(new ComponentA())
+///         ..add(new ComponentB());
+///
+/// Adding components to entities like this will update the [ComponentTypeStore]
+/// that corresponds to the component type in the [World]'s [typeStoreRegistry].
+/// This also means that you may only add components of a type for which a store
+/// is currently registered with the [World]'s [typeStoreRegistry]; if no
+/// matching store is currently registered, then an error will be thrown.
+///
+/// Changes to the [typeStoreRegistry] or any of its [ComponentTypeStore]s will
+/// also lead the changes in the [World] and its entities. Adding a new
+/// component value to a store for a certain entity ID may result either in the
+/// creation of a new entity if no entity with this ID exists in the [World], or
+/// adds the component value to the entity if it already existed. Removing a
+/// component value for a certain entity ID from a store will remove the
+/// component from the corresponding entity in the [World]. Updating a component
+/// value for a certain entity ID on a store will update the component value for
+/// this component type on the corresponding entity in the world. Removing all
+/// component values for a certain entity ID from all stores will not remove the
+/// corresponding entity from the [World]; the entity will still exist as an
+/// empty (componentless) entity in the [World].
+///
+/// Note that both a [World] and its individual entities can be observed for
+/// [changes]. Changes made via the [typeStoreRegistry] will propagate and
+/// trigger the appropriate change notifications on the [World] and/or its
+/// individual entities.
 class World extends IterableBase<Entity> {
-  final Map<Type, ComponentStore> _typesStores = {};
+  /// The [TypeStoreRegistry] viewed by this [World].
+  final TypeStoreRegistry typeStoreRegistry;
 
   final Map<int, _WorldEntityView> _entities = {};
 
   final ChangeNotifier<WorldChangeRecord> _changeNotifier =
       new ChangeNotifier();
 
-  ComponentDatabase _componentDatabase;
+  final Map<ComponentTypeStore, StreamSubscription> _storesSubscriptions = {};
 
   int _lastId = -1;
 
-  World() {
-    _componentDatabase = new ComponentDatabase(this);
+  /// Instantiates a new [World] as a view on the given [typeStoreRegistry].
+  World(this.typeStoreRegistry) {
+    for (final store in typeStoreRegistry.stores) {
+      for (final id in store.entityIds) {
+        if (!_entities.containsKey(id)) {
+          _entities[id] = new _WorldEntityView(this, id);
+
+          if (id > _lastId) {
+            _lastId = id;
+          }
+        }
+      }
+
+      _storesSubscriptions[store] = store.changes.listen((changeRecords) {
+        _handleComponentStoreChange(changeRecords);
+      });
+    }
+
+    typeStoreRegistry.changes.listen((changeRecords) {
+      for (final changeRecord in changeRecords) {
+        if (changeRecord.isInsert) {
+          final store = changeRecord.newValue;
+
+          for (final id in changeRecord.newValue.entityIds) {
+            final entity = _entities[id];
+
+            if (entity == null) {
+              _createEntityInternal(id, 1);
+            } else {
+              entity._changeNotifier
+                  .notifyChange(new EntityChangeRecord.add(store[id]));
+
+              entity._length++;
+            }
+          }
+
+          _storesSubscriptions[store] = store.changes.listen((changeRecords) {
+            _handleComponentStoreChange(changeRecords);
+          });
+        } else if (changeRecord.isRemove) {
+          for (final id in changeRecord.oldValue.entityIds) {
+            final entity = _entities[id];
+
+            if (entity != null) {
+              entity._length--;
+            }
+          }
+
+          _storesSubscriptions[changeRecord.oldValue].cancel();
+          _storesSubscriptions.remove(changeRecord.oldValue);
+        } else {
+          final oldStore = changeRecord.oldValue;
+          final newStore = changeRecord.newValue;
+          final oldIds = oldStore.entityIds.toSet();
+          final newIds = newStore.entityIds.toSet();
+
+          for (final id in newIds) {
+            final entity = _entities[id];
+
+            if (oldIds.contains(id)) {
+              oldIds.remove(id);
+
+              if (entity != null) {
+                entity._changeNotifier.notifyChange(
+                    new EntityChangeRecord(oldStore[id], newStore[id]));
+              }
+            } else {
+              if (entity == null) {
+                _createEntityInternal(id, 1);
+              } else {
+                entity._changeNotifier
+                    .notifyChange(new EntityChangeRecord.add(newStore[id]));
+
+                entity._length++;
+              }
+            }
+          }
+
+          for (final id in oldIds) {
+            final entity = _entities[id];
+
+            if (entity != null) {
+              entity._changeNotifier
+                  .notifyChange(new EntityChangeRecord.remove(oldStore[id]));
+
+              entity._length--;
+            }
+          }
+
+          _storesSubscriptions[oldStore].cancel();
+          _storesSubscriptions.remove(oldStore);
+
+          _storesSubscriptions[newStore] =
+              newStore.changes.listen((changeRecords) {
+            _handleComponentStoreChange(changeRecords);
+          });
+        }
+      }
+    });
   }
 
-  ComponentDatabase get componentDatabase => _componentDatabase;
-
+  /// A synchronous [Stream] of the changes that occur to this [World].
   Stream<List<WorldChangeRecord>> get changes => _changeNotifier.changes;
 
   Iterator<Entity> get iterator => _entities.values.iterator;
 
+  /// Creates a new empty (componentless) entity in this [World].
   Entity createEntity() => _createEntityInternal(_lastId++);
 
-  bool removeEntity(Entity entity) => removeEntityById(entity.id);
+  /// Removes the given [entity] from this [World].
+  ///
+  /// This will also remove any component values associated with the [entity]'s
+  /// ID in any of the [ComponentTypeStore]s registered with this [World]'s
+  /// [typeStoreRegistry].
+  ///
+  /// Returns `true` if the [entity] was contained in this [World] and removed
+  /// successfully, `false` otherwise.
+  bool removeEntity(Entity entity) {
+    if (entity is _WorldEntityView && entity.world == this) {
+      return removeEntityById(entity.id);
+    } else {
+      return false;
+    }
+  }
 
+  /// Removes the entity identified by the given [entityId] from this [World].
+  ///
+  /// This will also remove any component values associated with the [entityId]
+  /// in any of the [ComponentTypeStore]s registered with this [World]'s
+  /// [typeStoreRegistry].
+  ///
+  /// Returns `true` if an entity with the [entityId] was contained in this
+  /// [World] and it was removed successfully, `false` otherwise.
   bool removeEntityById(int entityId) {
     final entity = _entities.remove(entityId);
 
     if (entity != null) {
       _changeNotifier.notifyChange(new WorldChangeRecord.remove(this, entity));
 
-      for (final store in componentDatabase.stores) {
+      for (final store in typeStoreRegistry.stores) {
         store.remove(entityId);
       }
 
@@ -51,98 +204,58 @@ class World extends IterableBase<Entity> {
     }
   }
 
+  /// Finds the entity identified by the given [id].
+  ///
+  /// Returns the entity identified by the [id] if this [World] contains an
+  /// entity identified by the [id], `null` otherwise.
   Entity findEntity(int id) => _entities[id];
 
   Entity _createEntityInternal(int id, [int length = 0]) {
     final entity = new _WorldEntityView(this, id).._length = length;
 
     _entities[id] = entity;
-    _changeNotifier.notifyChange(new WorldChangeRecord.add(this, entity));
+    _changeNotifier.notifyChange(new WorldChangeRecord.create(this, entity));
+
+    if (id > _lastId) {
+      _lastId = id;
+    }
 
     return entity;
   }
-}
 
-class ComponentDatabase {
-  final World world;
+  void _handleComponentStoreChange(
+      List<ComponentTypeStoreChangeRecord> changeRecords) {
+    for (final changeRecord in changeRecords) {
+      final entityId = changeRecord.entityId;
+      final entity = _entities[entityId];
 
-  final Map<Type, ComponentStore> _typesStores = {};
+      if (entity == null) {
+        if (changeRecord.isInsert) {
+          _createEntityInternal(entityId, 1);
+        }
+      } else {
+        if (changeRecord.isInsert) {
+          entity._changeNotifier
+              .notifyChange(new EntityChangeRecord.add(changeRecord.newValue));
 
-  final Map<ComponentStore, StreamSubscription> _storesSubscriptions = {};
-
-  ComponentDatabase(this.world);
-
-  Iterable<ComponentStore> get stores => _typesStores.values;
-
-  Iterable<Type> get types => _typesStores.keys;
-
-  bool containsStore(ComponentStore store) => _typesStores.containsValue(store);
-
-  bool containsType(Type type) => _typesStores.containsKey(type);
-
-  bool remove(Type type) {
-    final store = _typesStores[type];
-
-    if (store != null) {
-      _storesSubscriptions[store].cancel();
-      _storesSubscriptions.remove(store);
-      _typesStores.remove(type);
-
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  void forEach(void f(Type type, ComponentStore store)) => _typesStores.forEach(f);
-
-  ComponentStore operator [](Type type) => _typesStores[type];
-
-  void operator []=(Type type, ComponentStore store) {
-    if (_typesStores.containsKey(type)) {
-      remove(type);
-    }
-
-    _typesStores[type] = store;
-
-    for (final entityId in store.entityIds) {
-      if (!world._entities.containsKey(entityId)) {
-        world._createEntityInternal(entityId, 1);
-      }
-    }
-
-    _storesSubscriptions[store] = store.changes.listen((changeRecords) {
-      for (final changeRecord in changeRecords) {
-        final entityId = changeRecord.entityId;
-        final entity = world._entities[entityId];
-
-        if (entity == null) {
-          if (changeRecord.isInsert) {
-            world._createEntityInternal(entityId, 1);
-          }
+          entity._length++;
+        } else if (changeRecord.isRemove) {
+          entity._changeNotifier.notifyChange(
+              new EntityChangeRecord.remove(changeRecord.oldValue));
+          entity._length--;
         } else {
-          if (changeRecord.isInsert) {
-            entity._changeNotifier.notifyChange(
-                new EntityChangeRecord.add(type, changeRecord.newValue));
-
-            entity._length++;
-          } else if (changeRecord.isRemove) {
-            entity._changeNotifier.notifyChange(
-                new EntityChangeRecord.remove(type, changeRecord.oldValue));
-            entity._length--;
-          } else {
-            entity._changeNotifier.notifyChange(new EntityChangeRecord(
-                type, changeRecord.oldValue, changeRecord.newValue));
-          }
+          entity._changeNotifier.notifyChange(new EntityChangeRecord(
+              changeRecord.oldValue, changeRecord.newValue));
         }
       }
-    });
+    }
   }
 }
 
 /// A [ChangeRecord] that denotes the creation or removal of entities from a
 /// [World].
 class WorldChangeRecord implements ChangeRecord {
+  /// The [World] to which the change applies.
   final World world;
 
   /// Whether the change concerns the removal of the [entity].
@@ -151,7 +264,12 @@ class WorldChangeRecord implements ChangeRecord {
   /// The entity that was created or removed in the operation.
   final Entity entity;
 
-  const WorldChangeRecord.add(this.world, this.entity) : isRemove = false;
+  /// Creates a new [WorldChangRecord] that represents the creation of a new
+  /// entity,
+  const WorldChangeRecord.create(this.world, this.entity) : isRemove = false;
+
+  /// Creates a new [WorldChangeRecord] that represents the removal of an
+  /// entity.
   const WorldChangeRecord.remove(this.world, this.entity) : isRemove = true;
 
   /// Whether the change concerns the creation of the [entity].
@@ -167,7 +285,7 @@ class WorldChangeRecord implements ChangeRecord {
   int get hashCode => hash3(world, entity, isRemove);
 }
 
-class _WorldEntityView implements Entity {
+class _WorldEntityView extends IterableBase<Object> implements Entity {
   final World world;
 
   final int id;
@@ -184,7 +302,7 @@ class _WorldEntityView implements Entity {
   int get length => _length;
 
   bool contains(Object value) {
-    final store = world.componentDatabase[value.runtimeType];
+    final store = world.typeStoreRegistry.get(value.runtimeType);
 
     if (store == null) {
       return false;
@@ -193,8 +311,8 @@ class _WorldEntityView implements Entity {
     }
   }
 
-  bool containsType(Type type) {
-    final store = world.componentDatabase[type];
+  bool hasComponentType(Type type) {
+    final store = world.typeStoreRegistry.get(type);
 
     if (store == null) {
       return false;
@@ -207,52 +325,34 @@ class _WorldEntityView implements Entity {
 
   bool get isNotEmpty => _length > 0;
 
-  Iterable<Type> get types {
-    final types = <Type>[];
+  Iterator<Object> get iterator => new _WorldEntityViewIterator(this);
 
-    world.componentDatabase.forEach((type, store) {
-      if (store.containsComponentFor(id)) {
-        types.add(type);
-      }
-    });
-
-    return types;
-  }
-
-  bool add(Object component) {
-    final store = world.componentDatabase[component.runtimeType];
+  bool add<T>(T component) {
+    final type = T == dynamic ? component.runtimeType : T;
+    final store = world.typeStoreRegistry.get(type);
 
     if (store == null) {
-      throw new ArgumentError('Could not add component `$component` of runtime '
-          'type `${component.runtimeType}`, because no store exists for this '
-          'type on this entities world.');
+      throw new ArgumentError('Tried to add a component of type `$type`, but '
+          'no store of that type was registered with the type store registry.');
     } else {
       final oldLength = store.length;
 
       store[id] = component;
 
-      // No need to call the change notifier here or update _length, the world
-      // is listening to changes on the component store and will take care of
-      // both of these things.
-
       return oldLength < store.length;
     }
   }
 
-  bool addIfAbsent(Object component) {
-    final store = world.componentDatabase[component.runtimeType];
+  bool addIfAbsent<T>(T component) {
+    final type = T == dynamic ? component.runtimeType : T;
+    final store = world.typeStoreRegistry.get(type);
 
     if (store == null) {
-      throw new ArgumentError('Could not add component `$component` of runtime '
-          'type `${component.runtimeType}`, because no store exists for this '
-          'type on this entities world.');
+      throw new ArgumentError('Tried to add a component of type `$type`, but '
+          'no store of that type was registered with the type store registry.');
     } else {
       if (!store.containsComponentFor(id)) {
         store[id] = component;
-
-        // No need to call the change notifier here or update _length, the world
-        // is listening to changes on the component store and will take care of
-        // both of these things.
 
         return true;
       } else {
@@ -261,37 +361,64 @@ class _WorldEntityView implements Entity {
     }
   }
 
-  Object remove(Type componentType) {
-    final store = world.componentDatabase[componentType];
+  T remove<T>([Type componentType = T]) {
+    final store = world.typeStoreRegistry.get<T>(componentType);
 
     if (store == null) {
-      return false;
+      return null;
     } else {
-      // No need to call the change notifier here or update _length, the world
-      // is listening to changes on the component store and will take care of
-      // both of these things.
-
       return store.remove(id);
     }
   }
 
-  void clear() {}
-
-  void forEach(void f(Object component)) {
-    for (final store in world.componentDatabase.stores) {
-      if (store.containsComponentFor(id)) {
-        f(store[id]);
-      }
+  void clear() {
+    for (final store in world.typeStoreRegistry.stores) {
+      store.remove(id);
     }
   }
 
-  Object operator [](Type type) {
-    final store = world.componentDatabase[type];
+  T get<T>([Type componentType = T]) {
+    final store = world.typeStoreRegistry.get<T>(componentType);
 
-    if (store != null) {
-      return store[id];
-    } else {
+    if (store == null) {
       return null;
+    } else {
+      return store[id];
+    }
+  }
+}
+
+class _WorldEntityViewIterator implements Iterator<Object> {
+  final _WorldEntityView entity;
+
+  Iterator<ComponentTypeStore> _storesIterator;
+
+  int _entityId;
+
+  Object _current;
+
+  _WorldEntityViewIterator(this.entity) {
+    _entityId = entity.id;
+    _storesIterator = entity.world.typeStoreRegistry.stores.iterator;
+  }
+
+  Object get current => _storesIterator.current[_entityId];
+
+  bool moveNext() {
+    if (_storesIterator.moveNext()) {
+      _current = _storesIterator.current[_entityId];
+
+      while (_current == null) {
+        if (!_storesIterator.moveNext()) {
+          return false;
+        }
+
+        _current = _storesIterator.current[_entityId];
+      }
+
+      return true;
+    } else {
+      return false;
     }
   }
 }

@@ -1,7 +1,9 @@
-part of component_store;
+part of component_data;
 
-class LinkedHashMapStore<T> implements ComponentStore<T> {
-  final ChangeNotifier<ComponentStoreChangeRecord<T>> _changeNotifier =
+/// A [ComponentTypeStore] that internally uses a [LinkedHashMap] to store the
+/// component values and associate them with entity IDs.
+class LinkedHashMapStore<T> implements ComponentTypeStore<T> {
+  final ChangeNotifier<ComponentTypeStoreChangeRecord<T>> _changeNotifier =
       new ChangeNotifier();
 
   final LinkedHashMap<int, T> _storage = new LinkedHashMap();
@@ -16,7 +18,7 @@ class LinkedHashMapStore<T> implements ComponentStore<T> {
 
   Iterable<int> get entityIds => _storage.keys;
 
-  Stream<List<ComponentStoreChangeRecord<T>>> get changes =>
+  Stream<List<ComponentTypeStoreChangeRecord<T>>> get changes =>
       _changeNotifier.changes;
 
   ComponentStoreIterator<T> get iterator =>
@@ -30,8 +32,8 @@ class LinkedHashMapStore<T> implements ComponentStore<T> {
     final value = _storage.remove(entityId);
 
     if (value != null) {
-      _changeNotifier
-          .notifyChange(new ComponentStoreChangeRecord.remove(entityId, value));
+      _changeNotifier.notifyChange(
+          new ComponentTypeStoreChangeRecord.remove(entityId, value));
     }
 
     return value;
@@ -52,10 +54,10 @@ class LinkedHashMapStore<T> implements ComponentStore<T> {
 
     if (oldValue != null) {
       _changeNotifier.notifyChange(
-          new ComponentStoreChangeRecord.insert(entityId, component));
+          new ComponentTypeStoreChangeRecord.insert(entityId, component));
     } else {
       _changeNotifier.notifyChange(
-          new ComponentStoreChangeRecord(entityId, oldValue, component));
+          new ComponentTypeStoreChangeRecord(entityId, oldValue, component));
     }
   }
 }
