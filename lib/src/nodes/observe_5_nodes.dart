@@ -32,9 +32,9 @@ class Observe5Nodes<C0, C1, C2, C3, C4>
 
   /// Creates a new [Observe5Nodes] instance that joins [store0], [store1],
   /// [store2], [store3] and [store4].
-  Observe5Nodes(this.store0, this.store1, this.store2, this.store3, this.store4) {
-    for (final node
-        in new Join5Nodes(store0, store1, store2, store3, store4)) {
+  Observe5Nodes(
+      this.store0, this.store1, this.store2, this.store3, this.store4) {
+    for (final node in new Join5Nodes(store0, store1, store2, store3, store4)) {
       _entityIdsNodes[node.entityId] = node;
     }
 

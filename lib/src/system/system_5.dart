@@ -42,7 +42,8 @@ class System5<C0, C1, C2, C3, C4> {
     final store3 = typeStoreRegistry.get<C3>(C3);
     final store4 = typeStoreRegistry.get<C4>(C4);
 
-    _nodes = new Observe5Nodes<C0, C1, C2, C3, C4>(store0, store1, store2, store3, store4);
+    _nodes = new Observe5Nodes<C0, C1, C2, C3, C4>(
+        store0, store1, store2, store3, store4);
   }
 
   void run(num deltaTime) {
