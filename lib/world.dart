@@ -59,12 +59,16 @@ class World extends IterableBase<Entity> {
   World(this.typeStoreRegistry) {
     for (final store in typeStoreRegistry.stores) {
       for (final id in store.entityIds) {
-        if (!_entities.containsKey(id)) {
-          _entities[id] = new _WorldEntityView(this, id);
+        final entity = _entities[id];
+
+        if (entity == null) {
+          _entities[id] = new _WorldEntityView(this, id).._length = 1;
 
           if (id > _lastId) {
             _lastId = id;
           }
+        } else {
+          entity._length++;
         }
       }
 
@@ -85,7 +89,8 @@ class World extends IterableBase<Entity> {
               _createEntityInternal(id, 1);
             } else {
               entity._changeNotifier
-                  .notifyChange(new EntityChangeRecord.add(store[id]));
+                ..notifyChange(new EntityChangeRecord.add(store[id]))
+                ..deliverChanges();
 
               entity._length++;
             }
@@ -95,11 +100,16 @@ class World extends IterableBase<Entity> {
             _handleComponentStoreChange(changeRecords);
           });
         } else if (changeRecord.isRemove) {
-          for (final id in changeRecord.oldValue.entityIds) {
-            final entity = _entities[id];
+          final iterator = changeRecord.oldValue.iterator;
+
+          while (iterator.moveNext()) {
+            final entity = _entities[iterator.currentEntityId];
 
             if (entity != null) {
               entity._length--;
+              entity._changeNotifier
+                ..notifyChange(new EntityChangeRecord.remove(iterator.current))
+                ..deliverChanges();
             }
           }
 
@@ -118,15 +128,18 @@ class World extends IterableBase<Entity> {
               oldIds.remove(id);
 
               if (entity != null) {
-                entity._changeNotifier.notifyChange(
-                    new EntityChangeRecord(oldStore[id], newStore[id]));
+                entity._changeNotifier
+                  ..notifyChange(
+                      new EntityChangeRecord(oldStore[id], newStore[id]))
+                  ..deliverChanges();
               }
             } else {
               if (entity == null) {
                 _createEntityInternal(id, 1);
               } else {
                 entity._changeNotifier
-                    .notifyChange(new EntityChangeRecord.add(newStore[id]));
+                  ..notifyChange(new EntityChangeRecord.add(newStore[id]))
+                  ..deliverChanges();
 
                 entity._length++;
               }
@@ -138,7 +151,8 @@ class World extends IterableBase<Entity> {
 
             if (entity != null) {
               entity._changeNotifier
-                  .notifyChange(new EntityChangeRecord.remove(oldStore[id]));
+                ..notifyChange(new EntityChangeRecord.remove(oldStore[id]))
+                ..deliverChanges();
 
               entity._length--;
             }
@@ -161,8 +175,19 @@ class World extends IterableBase<Entity> {
 
   Iterator<Entity> get iterator => _entities.values.iterator;
 
+  int get length => _entities.length;
+
+  bool get isEmpty => _entities.isEmpty;
+
+  bool get isNotEmpty => _entities.isNotEmpty;
+
+  bool contains(Object object) =>
+      object is _WorldEntityView &&
+      object.world == this &&
+      _entities.containsKey(object.id);
+
   /// Creates a new empty (componentless) entity in this [World].
-  Entity createEntity() => _createEntityInternal(_lastId++);
+  Entity createEntity() => _createEntityInternal(_lastId + 1);
 
   /// Removes the given [entity] from this [World].
   ///
@@ -192,7 +217,9 @@ class World extends IterableBase<Entity> {
     final entity = _entities.remove(entityId);
 
     if (entity != null) {
-      _changeNotifier.notifyChange(new WorldChangeRecord.remove(this, entity));
+      _changeNotifier
+        ..notifyChange(new WorldChangeRecord.remove(this, entity))
+        ..deliverChanges();
 
       for (final store in typeStoreRegistry.stores) {
         store.remove(entityId);
@@ -214,7 +241,9 @@ class World extends IterableBase<Entity> {
     final entity = new _WorldEntityView(this, id).._length = length;
 
     _entities[id] = entity;
-    _changeNotifier.notifyChange(new WorldChangeRecord.create(this, entity));
+    _changeNotifier
+      ..notifyChange(new WorldChangeRecord.create(this, entity))
+      ..deliverChanges();
 
     if (id > _lastId) {
       _lastId = id;
@@ -236,16 +265,20 @@ class World extends IterableBase<Entity> {
       } else {
         if (changeRecord.isInsert) {
           entity._changeNotifier
-              .notifyChange(new EntityChangeRecord.add(changeRecord.newValue));
+            ..notifyChange(new EntityChangeRecord.add(changeRecord.newValue))
+            ..deliverChanges();
 
           entity._length++;
         } else if (changeRecord.isRemove) {
-          entity._changeNotifier.notifyChange(
-              new EntityChangeRecord.remove(changeRecord.oldValue));
+          entity._changeNotifier
+            ..notifyChange(new EntityChangeRecord.remove(changeRecord.oldValue))
+            ..deliverChanges();
           entity._length--;
         } else {
-          entity._changeNotifier.notifyChange(new EntityChangeRecord(
-              changeRecord.oldValue, changeRecord.newValue));
+          entity._changeNotifier
+            ..notifyChange(new EntityChangeRecord(
+                changeRecord.oldValue, changeRecord.newValue))
+            ..deliverChanges();
         }
       }
     }
@@ -283,6 +316,14 @@ class WorldChangeRecord implements ChangeRecord {
           isRemove == other.isRemove;
 
   int get hashCode => hash3(world, entity, isRemove);
+
+  String toString() {
+    if (isRemove) {
+      return 'WorldChangeRecord.remove($entity)';
+    } else {
+      return 'WorldChangeRecord.create($entity)';
+    }
+  }
 }
 
 class _WorldEntityView extends IterableBase<Object> implements Entity {
@@ -302,7 +343,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
   int get length => _length;
 
   bool contains(Object value) {
-    final store = world.typeStoreRegistry.get(value.runtimeType);
+    final store = world.typeStoreRegistry.getStore(value.runtimeType);
 
     if (store == null) {
       return false;
@@ -312,7 +353,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
   }
 
   bool hasComponentType(Type type) {
-    final store = world.typeStoreRegistry.get(type);
+    final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {
       return false;
@@ -327,25 +368,25 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
 
   Iterator<Object> get iterator => new _WorldEntityViewIterator(this);
 
-  bool add<T>(T component) {
+  T add<T>(T component) {
     final type = T == dynamic ? component.runtimeType : T;
-    final store = world.typeStoreRegistry.get(type);
+    final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {
       throw new ArgumentError('Tried to add a component of type `$type`, but '
           'no store of that type was registered with the type store registry.');
     } else {
-      final oldLength = store.length;
+      final oldValue = store[id];
 
       store[id] = component;
 
-      return oldLength < store.length;
+      return oldValue;
     }
   }
 
   bool addIfAbsent<T>(T component) {
     final type = T == dynamic ? component.runtimeType : T;
-    final store = world.typeStoreRegistry.get(type);
+    final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {
       throw new ArgumentError('Tried to add a component of type `$type`, but '
@@ -362,7 +403,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
   }
 
   T remove<T>([Type componentType = T]) {
-    final store = world.typeStoreRegistry.get<T>(componentType);
+    final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
       return null;
@@ -377,8 +418,8 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
     }
   }
 
-  T get<T>([Type componentType = T]) {
-    final store = world.typeStoreRegistry.get<T>(componentType);
+  T getComponent<T>([Type componentType = T]) {
+    final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
       return null;
@@ -386,6 +427,8 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
       return store[id];
     }
   }
+
+  String toString() => 'Entity(id: $id)';
 }
 
 class _WorldEntityViewIterator implements Iterator<Object> {

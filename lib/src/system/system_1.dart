@@ -15,7 +15,7 @@ class System1<C0> {
   }
 
   void run(num deltaTime) {
-    final c0Store = typeStoreRegistry.get<C0>(C0);
+    final c0Store = typeStoreRegistry.getStore<C0>(C0);
 
     if (c0Store != null) {
       for (final component in c0Store.components) {

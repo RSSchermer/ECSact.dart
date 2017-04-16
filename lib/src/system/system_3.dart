@@ -25,9 +25,9 @@ class System3<C0, C1, C2> {
           'must not be `dynamic`.');
     }
 
-    final store0 = typeStoreRegistry.get<C0>(C0);
-    final store1 = typeStoreRegistry.get<C1>(C1);
-    final store2 = typeStoreRegistry.get<C2>(C2);
+    final store0 = typeStoreRegistry.getStore<C0>(C0);
+    final store1 = typeStoreRegistry.getStore<C1>(C1);
+    final store2 = typeStoreRegistry.getStore<C2>(C2);
 
     _nodes = new Observe3Nodes<C0, C1, C2>(store0, store1, store2);
   }

@@ -7,21 +7,22 @@ part of nodes;
 /// Similar to [Join4Nodes], but rather than reconstruct the sequence of [Node4]
 /// instances on every iteration, it maintains a sequence of [Node4] instances
 /// by observing the [ComponentTypeStore]s.
-class Observe4Nodes<C0, C1, C2, C3>
-    extends IterableBase<Node4<C0, C1, C2, C3>> {
+class Observe4Nodes<T0, T1, T2, T3>
+    extends IterableBase<Node4<T0, T1, T2, T3>> {
   /// The first [ComponentTypeStore].
-  final ComponentTypeStore<C0> store0;
+  final ComponentTypeStore<T0> store0;
 
   /// The second [ComponentTypeStore].
-  final ComponentTypeStore<C1> store1;
+  final ComponentTypeStore<T1> store1;
 
   /// The third [ComponentTypeStore].
-  final ComponentTypeStore<C2> store2;
+  final ComponentTypeStore<T2> store2;
 
   /// The fourth [ComponentTypeStore].
-  final ComponentTypeStore<C3> store3;
+  final ComponentTypeStore<T3> store3;
 
-  final Map<int, Node4<C0, C1, C2, C3>> _entityIdsNodes = {};
+  final Map<int, Node4<T0, T1, T2, T3>> _entityIdsNodes =
+      <int, Node4<T0, T1, T2, T3>>{};
 
   final Set<int> _potentialInserts = new Set();
 
@@ -46,8 +47,8 @@ class Observe4Nodes<C0, C1, C2, C3>
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node4(id, changeRecord.newValue, node.c1, node.c2, node.c3);
+            _entityIdsNodes[id] = new Node4<T0, T1, T2, T3>(
+                id, changeRecord.newValue, node.c1, node.c2, node.c3);
           }
         }
       }
@@ -65,8 +66,8 @@ class Observe4Nodes<C0, C1, C2, C3>
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node4(id, node.c0, changeRecord.newValue, node.c2, node.c3);
+            _entityIdsNodes[id] = new Node4<T0, T1, T2, T3>(
+                id, node.c0, changeRecord.newValue, node.c2, node.c3);
           }
         }
       }
@@ -84,8 +85,8 @@ class Observe4Nodes<C0, C1, C2, C3>
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node4(id, node.c0, node.c1, changeRecord.newValue, node.c3);
+            _entityIdsNodes[id] = new Node4<T0, T1, T2, T3>(
+                id, node.c0, node.c1, changeRecord.newValue, node.c3);
           }
         }
       }
@@ -103,15 +104,15 @@ class Observe4Nodes<C0, C1, C2, C3>
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node4(id, node.c0, node.c1, node.c2, changeRecord.newValue);
+            _entityIdsNodes[id] = new Node4<T0, T1, T2, T3>(
+                id, node.c0, node.c1, node.c2, changeRecord.newValue);
           }
         }
       }
     });
   }
 
-  Iterator<Node4<C0, C1, C2, C3>> get iterator {
+  Iterator<Node4<T0, T1, T2, T3>> get iterator {
     for (final id in _potentialInserts) {
       final c0 = store0[id];
       final c1 = store1[id];
@@ -119,7 +120,7 @@ class Observe4Nodes<C0, C1, C2, C3>
       final c3 = store3[id];
 
       if (c0 != null && c1 != null && c2 != null && c3 != null) {
-        _entityIdsNodes[id] = new Node4(id, c0, c1, c2, c3);
+        _entityIdsNodes[id] = new Node4<T0, T1, T2, T3>(id, c0, c1, c2, c3);
       }
     }
 

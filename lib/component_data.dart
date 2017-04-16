@@ -7,7 +7,7 @@ import 'dart:collection';
 import 'package:observable/observable.dart';
 import 'package:quiver/core.dart';
 
-part 'src/component_database/linked_hash_map_store.dart';
+part 'src/component_data/linked_hash_map_store.dart';
 
 /// Registers [ComponentTypesStores] for component types.
 ///
@@ -38,8 +38,8 @@ class TypeStoreRegistry {
 
   /// Returns the [ComponentTypeStore] registered for the [type] or `null` if
   /// no [ComponentTypeStore] is currently registered for the [type].
-  ComponentTypeStore<T>
-      get<T>([Type type = T]) => _typesStores[type] as ComponentTypeStore<T>;
+  ComponentTypeStore<T> getStore<T>([Type type = T]) => _typesStores[type]
+      as ComponentTypeStore<T>;
 
   /// Registers the [store] for type [type].
   ///
@@ -52,10 +52,12 @@ class TypeStoreRegistry {
 
     if (oldStore == null) {
       _changeNotifier
-          .notifyChange(new TypeStoreRegistryChangeRecord.insert(type, store));
+        ..notifyChange(new TypeStoreRegistryChangeRecord.insert(type, store))
+        ..deliverChanges();
     } else {
-      _changeNotifier.notifyChange(
-          new TypeStoreRegistryChangeRecord(type, oldStore, store));
+      _changeNotifier
+        ..notifyChange(new TypeStoreRegistryChangeRecord(type, oldStore, store))
+        ..deliverChanges();
     }
   }
 
@@ -67,7 +69,8 @@ class TypeStoreRegistry {
     if (store != null) {
       _typesStores.remove(type);
       _changeNotifier
-          .notifyChange(new TypeStoreRegistryChangeRecord.remove(type, store));
+        ..notifyChange(new TypeStoreRegistryChangeRecord.remove(type, store))
+        ..deliverChanges();
 
       return store as ComponentTypeStore<T>;
     } else {

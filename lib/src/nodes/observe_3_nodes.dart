@@ -7,17 +7,18 @@ part of nodes;
 /// Similar to [Join3Nodes], but rather than reconstruct the sequence of [Node3]
 /// instances on every iteration, it maintains a sequence of [Node3] instances
 /// by observing the [ComponentTypeStore]s.
-class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
+class Observe3Nodes<T0, T1, T2> extends IterableBase<Node3<T0, T1, T2>> {
   /// The first [ComponentTypeStore].
-  final ComponentTypeStore<C0> store0;
+  final ComponentTypeStore<T0> store0;
 
   /// The second [ComponentTypeStore].
-  final ComponentTypeStore<C1> store1;
+  final ComponentTypeStore<T1> store1;
 
   /// The third [ComponentTypeStore].
-  final ComponentTypeStore<C2> store2;
+  final ComponentTypeStore<T2> store2;
 
-  final Map<int, Node3<C0, C1, C2>> _entityIdsNodes = {};
+  final Map<int, Node3<T0, T1, T2>> _entityIdsNodes =
+      <int, Node3<T0, T1, T2>>{};
 
   final Set<int> _potentialInserts = new Set();
 
@@ -42,8 +43,8 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node3(id, changeRecord.newValue, node.c1, node.c2);
+            _entityIdsNodes[id] = new Node3<T0, T1, T2>(
+                id, changeRecord.newValue, node.c1, node.c2);
           }
         }
       }
@@ -61,8 +62,8 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node3(id, node.c0, changeRecord.newValue, node.c2);
+            _entityIdsNodes[id] = new Node3<T0, T1, T2>(
+                id, node.c0, changeRecord.newValue, node.c2);
           }
         }
       }
@@ -80,22 +81,22 @@ class Observe3Nodes<C0, C1, C2> extends IterableBase<Node3<C0, C1, C2>> {
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] =
-                new Node3(id, node.c0, node.c1, changeRecord.newValue);
+            _entityIdsNodes[id] = new Node3<T0, T1, T2>(
+                id, node.c0, node.c1, changeRecord.newValue);
           }
         }
       }
     });
   }
 
-  Iterator<Node3<C0, C1, C2>> get iterator {
+  Iterator<Node3<T0, T1, T2>> get iterator {
     for (final id in _potentialInserts) {
       final c0 = store0[id];
       final c1 = store1[id];
       final c2 = store2[id];
 
       if (c0 != null && c1 != null && c2 != null) {
-        _entityIdsNodes[id] = new Node3(id, c0, c1, c2);
+        _entityIdsNodes[id] = new Node3<T0, T1, T2>(id, c0, c1, c2);
       }
     }
 

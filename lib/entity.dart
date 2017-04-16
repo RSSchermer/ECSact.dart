@@ -57,7 +57,7 @@ abstract class Entity extends Iterable<Object> {
 
   /// Returns the component that matches the given [componentType] or `null` if
   /// this [Entity] does not contain a component of the [componentType].
-  T get<T>(Type componentType);
+  T getComponent<T>(Type componentType);
 }
 
 class _MapEntity extends IterableBase<Object> implements Entity {
@@ -84,25 +84,27 @@ class _MapEntity extends IterableBase<Object> implements Entity {
 
   Iterator<Object> get iterator => _typeComponents.values.iterator;
 
-  bool add<T>(T component) {
+  T add<T>(T component) {
     final type = T == dynamic ? component.runtimeType : T;
+    final oldValue = _typeComponents[type] as T;
+
+    _typeComponents[type] = component;
 
     if (!_changeNotifier.hasObservers) {
-      final oldValue = _typeComponents[type] = component;
-
-      return oldValue == null;
+      return oldValue;
     } else {
-      final oldValue = _typeComponents[component.runtimeType];
-
       if (oldValue == null) {
-        _changeNotifier.notifyChange(new EntityChangeRecord.add(component));
+        _changeNotifier
+          ..notifyChange(new EntityChangeRecord<T>.add(component))
+          ..deliverChanges();
 
-        return true;
+        return null;
       } else {
         _changeNotifier
-            .notifyChange(new EntityChangeRecord(oldValue, component));
+          ..notifyChange(new EntityChangeRecord<T>(oldValue, component))
+          ..deliverChanges();
 
-        return false;
+        return oldValue;
       }
     }
   }
@@ -113,7 +115,9 @@ class _MapEntity extends IterableBase<Object> implements Entity {
     if (!_typeComponents.containsKey(type)) {
       _typeComponents[type] = component;
 
-      _changeNotifier.notifyChange(new EntityChangeRecord.add(component));
+      _changeNotifier
+        ..notifyChange(new EntityChangeRecord<T>.add(component))
+        ..deliverChanges();
 
       return true;
     } else {
@@ -122,13 +126,15 @@ class _MapEntity extends IterableBase<Object> implements Entity {
   }
 
   T remove<T>(Type componentType) {
-    final component = _typeComponents.remove(componentType);
+    final component = _typeComponents.remove(componentType) as T;
 
     if (component != null) {
-      _changeNotifier.notifyChange(new EntityChangeRecord.remove(component));
+      _changeNotifier
+        ..notifyChange(new EntityChangeRecord<T>.remove(component))
+        ..deliverChanges();
     }
 
-    return component as T;
+    return component;
   }
 
   void clear() {
@@ -142,10 +148,11 @@ class _MapEntity extends IterableBase<Object> implements Entity {
       _changeNotifier.notifyChange(new EntityChangeRecord.remove(component));
     }
 
+    _changeNotifier.deliverChanges();
     _typeComponents.clear();
   }
 
-  T get<T>(Type type) => _typeComponents[type] as T;
+  T getComponent<T>(Type type) => _typeComponents[type] as T;
 }
 
 /// A [ChangeRecord] that denotes adding, removing, or updating an [Entity].
@@ -186,9 +193,9 @@ class EntityChangeRecord<T> implements ChangeRecord {
   /// Apply this change record to the [componentStore].
   void apply(Entity entity) {
     if (isRemove) {
-      entity.remove(oldValue.runtimeType);
+      entity.remove<T>(oldValue.runtimeType);
     } else {
-      entity.add(newValue);
+      entity.add<T>(newValue);
     }
   }
 

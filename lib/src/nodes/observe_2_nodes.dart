@@ -7,14 +7,14 @@ part of nodes;
 /// Similar to [Join2Nodes], but rather than reconstruct the sequence of [Node2]
 /// instances on every iteration, it maintains a sequence of [Node2] instances
 /// by observing the [ComponentTypeStore]s.
-class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
+class Observe2Nodes<T0, T1> extends IterableBase<Node2<T0, T1>> {
   /// The first [ComponentTypeStore].
-  final ComponentTypeStore<C0> store0;
+  final ComponentTypeStore<T0> store0;
 
   /// The second [ComponentTypeStore].
-  final ComponentTypeStore<C1> store1;
+  final ComponentTypeStore<T1> store1;
 
-  final Map<int, Node2<C0, C1>> _entityIdsNodes = {};
+  final Map<int, Node2<T0, T1>> _entityIdsNodes = <int, Node2<T0, T1>>{};
 
   final Set<int> _potentialInserts = new Set();
 
@@ -38,7 +38,8 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] = new Node2(id, changeRecord.newValue, node.c1);
+            _entityIdsNodes[id] =
+                new Node2<T0, T1>(id, changeRecord.newValue, node.c1);
           }
         }
       }
@@ -56,20 +57,21 @@ class Observe2Nodes<C0, C1> extends IterableBase<Node2<C0, C1>> {
           final node = _entityIdsNodes[id];
 
           if (node != null) {
-            _entityIdsNodes[id] = new Node2(id, node.c0, changeRecord.newValue);
+            _entityIdsNodes[id] =
+                new Node2<T0, T1>(id, node.c0, changeRecord.newValue);
           }
         }
       }
     });
   }
 
-  Iterator<Node2<C0, C1>> get iterator {
+  Iterator<Node2<T0, T1>> get iterator {
     for (final id in _potentialInserts) {
       final c0 = store0[id];
       final c1 = store1[id];
 
       if (c0 != null && c1 != null) {
-        _entityIdsNodes[id] = new Node2(id, c0, c1);
+        _entityIdsNodes[id] = new Node2<T0, T1>(id, c0, c1);
       }
     }
 

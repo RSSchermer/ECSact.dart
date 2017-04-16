@@ -36,11 +36,11 @@ class System5<C0, C1, C2, C3, C4> {
           'must not be `dynamic`.');
     }
 
-    final store0 = typeStoreRegistry.get<C0>(C0);
-    final store1 = typeStoreRegistry.get<C1>(C1);
-    final store2 = typeStoreRegistry.get<C2>(C2);
-    final store3 = typeStoreRegistry.get<C3>(C3);
-    final store4 = typeStoreRegistry.get<C4>(C4);
+    final store0 = typeStoreRegistry.getStore<C0>(C0);
+    final store1 = typeStoreRegistry.getStore<C1>(C1);
+    final store2 = typeStoreRegistry.getStore<C2>(C2);
+    final store3 = typeStoreRegistry.getStore<C3>(C3);
+    final store4 = typeStoreRegistry.getStore<C4>(C4);
 
     _nodes = new Observe5Nodes<C0, C1, C2, C3, C4>(
         store0, store1, store2, store3, store4);

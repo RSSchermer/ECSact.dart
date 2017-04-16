@@ -32,8 +32,10 @@ class LinkedHashMapStore<T> implements ComponentTypeStore<T> {
     final value = _storage.remove(entityId);
 
     if (value != null) {
-      _changeNotifier.notifyChange(
-          new ComponentTypeStoreChangeRecord.remove(entityId, value));
+      _changeNotifier
+        ..notifyChange(
+            new ComponentTypeStoreChangeRecord.remove(entityId, value))
+        ..deliverChanges();
     }
 
     return value;
@@ -52,12 +54,16 @@ class LinkedHashMapStore<T> implements ComponentTypeStore<T> {
 
     _storage[entityId] = component;
 
-    if (oldValue != null) {
-      _changeNotifier.notifyChange(
-          new ComponentTypeStoreChangeRecord.insert(entityId, component));
+    if (oldValue == null) {
+      _changeNotifier
+        ..notifyChange(
+            new ComponentTypeStoreChangeRecord.insert(entityId, component))
+        ..deliverChanges();
     } else {
-      _changeNotifier.notifyChange(
-          new ComponentTypeStoreChangeRecord(entityId, oldValue, component));
+      _changeNotifier
+        ..notifyChange(
+            new ComponentTypeStoreChangeRecord(entityId, oldValue, component))
+        ..deliverChanges();
     }
   }
 }

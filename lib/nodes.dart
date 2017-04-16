@@ -40,6 +40,8 @@ class Node2<T0, T1> {
           other.entityId == entityId &&
           other.c0 == c0 &&
           other.c1 == c1;
+
+  String toString() => 'Node2<$T0, $T1>($entityId, $c0, $c1)';
 }
 
 /// Combines three of an entity's component values of types [T0], [T1] and [T2].
@@ -69,6 +71,8 @@ class Node3<T0, T1, T2> {
           other.c0 == c0 &&
           other.c1 == c1 &&
           other.c2 == c2;
+
+  String toString() => 'Node3<$T0, $T1, $T2>($entityId, $c0, $c1, $c2)';
 }
 
 /// Combines four of an entity's component values of types [T0], [T1], [T2] and
@@ -103,6 +107,9 @@ class Node4<T0, T1, T2, T3> {
           other.c1 == c1 &&
           other.c2 == c2 &&
           other.c3 == c3;
+
+  String toString() =>
+      'Node4<$T0, $T1, $T2, $T3>($entityId, $c0, $c1, $c2, $c3)';
 }
 
 /// Combines five of an entity's component values of types [T0], [T1], [T2],
@@ -141,4 +148,7 @@ class Node5<T0, T1, T2, T3, T4> {
           other.c2 == c2 &&
           other.c3 == c3 &&
           other.c4 == c4;
+
+  String toString() =>
+      'Node4<$T0, $T1, $T2, $T3, $T4>($entityId, $c0, $c1, $c2, $c3, $c4)';
 }
