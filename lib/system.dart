@@ -1,8 +1,9 @@
-/// Data structures that help create simple systems.
+/// Data structures that help define simple systems.
 library system;
 
-import 'nodes.dart';
 import 'component_data.dart';
+import 'nodes.dart';
+import 'world.dart';
 
 part 'src/system/system_1.dart';
 part 'src/system/system_2.dart';

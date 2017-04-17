@@ -1,3 +1,4 @@
+/// A simple Entity-Component-System framework.
 library ecs;
 
 export 'component_data.dart';

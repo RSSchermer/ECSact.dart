@@ -46,17 +46,17 @@ class TypeStoreRegistry {
   /// If another [ComponentTypeStore] was already registered for the [type],
   /// then this other store is replaced with the [store].
   void add<T>(Type type, ComponentTypeStore<T> store) {
-    final oldStore = _typesStores[type];
+    final oldStore = _typesStores[type] as ComponentTypeStore<T>;
 
     _typesStores[type] = store;
 
     if (oldStore == null) {
       _changeNotifier
-        ..notifyChange(new TypeStoreRegistryChangeRecord.insert(type, store))
+        ..notifyChange(new TypeStoreRegistryChangeRecord<T>.insert(type, store))
         ..deliverChanges();
     } else {
       _changeNotifier
-        ..notifyChange(new TypeStoreRegistryChangeRecord(type, oldStore, store))
+        ..notifyChange(new TypeStoreRegistryChangeRecord<T>(type, oldStore, store))
         ..deliverChanges();
     }
   }
@@ -64,15 +64,15 @@ class TypeStoreRegistry {
   /// Removes the [ComponentTypeStore] associated with the [type] from this
   /// [TypeStoreRegistry].
   ComponentTypeStore<T> remove<T>([Type type = T]) {
-    final store = _typesStores[type];
+    final store = _typesStores[type] as ComponentTypeStore<T>;
 
     if (store != null) {
       _typesStores.remove(type);
       _changeNotifier
-        ..notifyChange(new TypeStoreRegistryChangeRecord.remove(type, store))
+        ..notifyChange(new TypeStoreRegistryChangeRecord<T>.remove(type, store))
         ..deliverChanges();
 
-      return store as ComponentTypeStore<T>;
+      return store;
     } else {
       return null;
     }
