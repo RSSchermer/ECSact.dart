@@ -81,6 +81,10 @@ class TypeStoreRegistry {
 
 /// Stores component values of type [T] and associates them with entity IDs.
 abstract class ComponentTypeStore<T> {
+  /// Instantiates a new [ComponentTypeStore] using the default implementation,
+  /// [LinkedHashMapStore].
+  factory ComponentTypeStore() = LinkedHashMapStore<T>;
+
   /// A synchronous stream of the changes made to this [ComponentTypeStore].
   ///
   /// A change is triggered when a component value is added, when a component
