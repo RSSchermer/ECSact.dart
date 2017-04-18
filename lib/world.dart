@@ -88,11 +88,11 @@ class World extends IterableBase<Entity> {
             if (entity == null) {
               _createEntityInternal(id, 1);
             } else {
+              entity._length++;
+
               entity._changeNotifier
                 ..notifyChange(new EntityChangeRecord.add(store[id]))
                 ..deliverChanges();
-
-              entity._length++;
             }
           }
 
@@ -107,6 +107,7 @@ class World extends IterableBase<Entity> {
 
             if (entity != null) {
               entity._length--;
+
               entity._changeNotifier
                 ..notifyChange(new EntityChangeRecord.remove(iterator.current))
                 ..deliverChanges();
@@ -137,11 +138,11 @@ class World extends IterableBase<Entity> {
               if (entity == null) {
                 _createEntityInternal(id, 1);
               } else {
+                entity._length++;
+
                 entity._changeNotifier
                   ..notifyChange(new EntityChangeRecord.add(newStore[id]))
                   ..deliverChanges();
-
-                entity._length++;
               }
             }
           }
@@ -150,11 +151,11 @@ class World extends IterableBase<Entity> {
             final entity = _entities[id];
 
             if (entity != null) {
+              entity._length--;
+
               entity._changeNotifier
                 ..notifyChange(new EntityChangeRecord.remove(oldStore[id]))
                 ..deliverChanges();
-
-              entity._length--;
             }
           }
 
@@ -217,13 +218,13 @@ class World extends IterableBase<Entity> {
     final entity = _entities.remove(entityId);
 
     if (entity != null) {
-      _changeNotifier
-        ..notifyChange(new WorldChangeRecord.remove(this, entity))
-        ..deliverChanges();
-
       for (final store in typeStoreRegistry.stores) {
         store.remove(entityId);
       }
+
+      _changeNotifier
+        ..notifyChange(new WorldChangeRecord.remove(this, entity))
+        ..deliverChanges();
 
       return true;
     } else {
@@ -241,13 +242,14 @@ class World extends IterableBase<Entity> {
     final entity = new _WorldEntityView(this, id).._length = length;
 
     _entities[id] = entity;
-    _changeNotifier
-      ..notifyChange(new WorldChangeRecord.create(this, entity))
-      ..deliverChanges();
 
     if (id > _lastId) {
       _lastId = id;
     }
+
+    _changeNotifier
+      ..notifyChange(new WorldChangeRecord.create(this, entity))
+      ..deliverChanges();
 
     return entity;
   }
@@ -264,16 +266,17 @@ class World extends IterableBase<Entity> {
         }
       } else {
         if (changeRecord.isInsert) {
+          entity._length++;
+
           entity._changeNotifier
             ..notifyChange(new EntityChangeRecord.add(changeRecord.newValue))
             ..deliverChanges();
-
-          entity._length++;
         } else if (changeRecord.isRemove) {
+          entity._length--;
+
           entity._changeNotifier
             ..notifyChange(new EntityChangeRecord.remove(changeRecord.oldValue))
             ..deliverChanges();
-          entity._length--;
         } else {
           entity._changeNotifier
             ..notifyChange(new EntityChangeRecord(

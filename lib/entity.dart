@@ -148,8 +148,8 @@ class _MapEntity extends IterableBase<Object> implements Entity {
       _changeNotifier.notifyChange(new EntityChangeRecord.remove(component));
     }
 
-    _changeNotifier.deliverChanges();
     _typeComponents.clear();
+    _changeNotifier.deliverChanges();
   }
 
   T getComponent<T>(Type type) => _typeComponents[type] as T;
