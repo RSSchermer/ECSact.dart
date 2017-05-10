@@ -84,7 +84,7 @@ class _MapEntity extends IterableBase<Object> implements Entity {
 
   Iterator<Object> get iterator => _typeComponents.values.iterator;
 
-  T add<T>(T component) {
+  T add<T>(T component, [Type componentType]) {
     final type = T == dynamic ? component.runtimeType : T;
     final oldValue = _typeComponents[type] as T;
 
