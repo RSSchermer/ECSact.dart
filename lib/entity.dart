@@ -34,14 +34,14 @@ abstract class Entity extends Iterable<Object> {
   ///
   /// Returns the old component value if this [Entity] already contained a
   /// component of the [component]'s type, `null` otherwise.
-  Object add<T>(T component);
+  Object add<T>(T component, [Type componentType]);
 
   /// Adds the [component] to this [Entity] if it does not already contain a
   /// a component of the same runtime type.
   ///
   /// Returns `true` if this [Entity] did not yet contain a component of the
   /// [component]'s type, `false` if it did and the component was not added.
-  bool addIfAbsent<T>(T component);
+  bool addIfAbsent<T>(T component, [Type componentType]);
 
   /// Removes the component that matches the [componentType] from this [Entity].
   ///
@@ -85,7 +85,7 @@ class _MapEntity extends IterableBase<Object> implements Entity {
   Iterator<Object> get iterator => _typeComponents.values.iterator;
 
   T add<T>(T component, [Type componentType]) {
-    final type = T == dynamic ? component.runtimeType : T;
+    final type = T == dynamic ? (componentType ?? component.runtimeType) : T;
     final oldValue = _typeComponents[type] as T;
 
     _typeComponents[type] = component;
