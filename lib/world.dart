@@ -371,8 +371,8 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
 
   Iterator<Object> get iterator => new _WorldEntityViewIterator(this);
 
-  T add<T>(T component) {
-    final type = T == dynamic ? component.runtimeType : T;
+  T add<T>(T component, [Type componentType]) {
+    final type = T == dynamic ? (componentType ?? component.runtimeType) : T;
     final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {

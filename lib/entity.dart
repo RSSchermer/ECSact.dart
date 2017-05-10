@@ -109,8 +109,8 @@ class _MapEntity extends IterableBase<Object> implements Entity {
     }
   }
 
-  bool addIfAbsent<T>(T component) {
-    final type = T == dynamic ? component.runtimeType : T;
+  bool addIfAbsent<T>(T component, [Type componentType]) {
+    final type = T == dynamic ? (componentType ?? component.runtimeType) : T;
 
     if (!_typeComponents.containsKey(type)) {
       _typeComponents[type] = component;
