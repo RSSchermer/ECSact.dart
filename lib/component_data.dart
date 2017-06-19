@@ -38,7 +38,7 @@ class TypeStoreRegistry {
 
   /// Returns the [ComponentTypeStore] registered for the [type] or `null` if
   /// no [ComponentTypeStore] is currently registered for the [type].
-  ComponentTypeStore<T> getStore<T>([Type type = T]) => _typesStores[type]
+  ComponentTypeStore<T> getStore<T>([Type type = dynamic]) => _typesStores[type]
       as ComponentTypeStore<T>;
 
   /// Registers the [store] for type [type].
@@ -63,7 +63,7 @@ class TypeStoreRegistry {
 
   /// Removes the [ComponentTypeStore] associated with the [type] from this
   /// [TypeStoreRegistry].
-  ComponentTypeStore<T> remove<T>([Type type = T]) {
+  ComponentTypeStore<T> remove<T>([Type type = dynamic]) {
     final store = _typesStores[type] as ComponentTypeStore<T>;
 
     if (store != null) {

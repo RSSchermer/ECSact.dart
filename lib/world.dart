@@ -405,7 +405,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
     }
   }
 
-  T remove<T>([Type componentType = T]) {
+  T remove<T>([Type componentType = dynamic]) {
     final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
@@ -421,7 +421,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
     }
   }
 
-  T getComponent<T>([Type componentType = T]) {
+  T getComponent<T>([Type componentType = dynamic]) {
     final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
