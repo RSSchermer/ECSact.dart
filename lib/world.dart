@@ -372,7 +372,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
   Iterator<Object> get iterator => new _WorldEntityViewIterator(this);
 
   T add<T>(T component, [Type componentType]) {
-    final type = T == dynamic ? (componentType ?? component.runtimeType) : T;
+    final type = componentType ?? component.runtimeType;
     final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {
@@ -388,7 +388,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
   }
 
   bool addIfAbsent<T>(T component, [Type componentType]) {
-    final type = T == dynamic ? (componentType ?? component.runtimeType) : T;
+    final type = componentType ?? component.runtimeType;
     final store = world.typeStoreRegistry.getStore(type);
 
     if (store == null) {
@@ -405,7 +405,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
     }
   }
 
-  T remove<T>([Type componentType = dynamic]) {
+  T remove<T>(Type componentType) {
     final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
@@ -421,7 +421,7 @@ class _WorldEntityView extends IterableBase<Object> implements Entity {
     }
   }
 
-  T getComponent<T>([Type componentType = dynamic]) {
+  T getComponent<T>(Type componentType) {
     final store = world.typeStoreRegistry.getStore<T>(componentType);
 
     if (store == null) {
