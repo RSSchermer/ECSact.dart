@@ -43,12 +43,12 @@ class System5<C0, C1, C2, C3, C4> {
           'must not be `dynamic`.');
     }
 
-    if (C2 == dynamic) {
+    if (C3 == dynamic) {
       throw new ArgumentError('The fourth type parameter must be specified and '
           'must not be `dynamic`.');
     }
 
-    if (C2 == dynamic) {
+    if (C4 == dynamic) {
       throw new ArgumentError('The fifth type parameter must be specified and '
           'must not be `dynamic`.');
     }
